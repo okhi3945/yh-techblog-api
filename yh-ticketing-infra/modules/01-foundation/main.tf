@@ -3,7 +3,7 @@
 
 # Terraform 상태 파일을 저장할 S3 버킷 (이름은 전역적으로 고유해야 함)
 resource "aws_s3_bucket" "tf_state" {
-  bucket = "techblog-tfstate-yh-s3"
+  bucket = "ticketing-tfstate-yh-s3"
   lifecycle {
     prevent_destroy = true 
   }  
@@ -22,7 +22,7 @@ resource "aws_s3_bucket_versioning" "tf_state_versioning" {
 
 # Terraform 상태 파일을 잠가 동시 실행으로 인한 상태 손상을 막는 DynamoDB 테이블
 resource "aws_dynamodb_table" "tf_locks" {
-  name           = "techblog-tf-locks"
+  name           = "ticketing-tf-locks"
   billing_mode   = "PAY_PER_REQUEST" # 사용한 만큼만 지불
   hash_key       = "LockID"
   attribute {
@@ -33,13 +33,13 @@ resource "aws_dynamodb_table" "tf_locks" {
     prevent_destroy = true 
   }
   tags = {
-    Name = "TechBlog Terraform Lock Table"
+    Name = "Ticketing Terraform Lock Table"
   }
 }
 
 # ECR
-resource "aws_ecr_repository" "techblog_api" {
-  name                 = "techblog-api-repo"
+resource "aws_ecr_repository" "ticketing_api" {
+  name                 = "ticketing-api-repo"
   image_scanning_configuration {
     scan_on_push = true
   }
@@ -51,13 +51,13 @@ resource "aws_ecr_repository" "techblog_api" {
   }
 
   tags = {
-    Name        = "TechBlog-API-Repository"
+    Name        = "Ticketing-API-Repository"
     Environment = "Dev"
   }
 }
 
 resource "aws_ecr_lifecycle_policy" "api_policy" {
-  repository = aws_ecr_repository.techblog_api.name
+  repository = aws_ecr_repository.ticketing_api.name
   policy     = jsonencode({
     rules = [
       {
@@ -85,5 +85,5 @@ output "tf_locks_table_name" {
 }
 
 output "ecr_repository_url" {
-  value = aws_ecr_repository.techblog_api.repository_url
+  value = aws_ecr_repository.ticketing_api.repository_url
 }
