@@ -23,6 +23,20 @@ module "compute" {
   ssh_public_key = var.public_ssh_key_content
 }
 
+# EKS 모듈 호출 (EKS Cluster, Node Group)
+module "eks" {
+  source = "./modules/04-eks"
+  
+  # Network 모듈에서 VPC와 서브넷 정보를 받아옴
+  vpc_id               = module.network.vpc_id
+  public_subnet_ids    = module.network.public_subnet_ids
+  private_subnet_ids   = module.network.private_subnet_ids
+
+  # AWS Region
+
+  aws_region = "ap-northeast-2"
+}
+
 # Root Output: 다른 프로젝트에서 참조할 수 있도록 최종 Output 통합
 output "vpc_id" {
   value = module.network.vpc_id
@@ -42,4 +56,9 @@ output "ecr_repository_url" {
 
 output "jenkins_public_ip" {
   value = module.compute.jenkins_public_ip
+}
+
+output "eks_kubeconfig_command" {
+  value = module.eks.eks_kubeconfig_command
+  description = "EKS 클러스터에 kubectl로 접속하기 위한 명령어 AWS CLI v2가 설치되어 있어야 함!!"
 }
