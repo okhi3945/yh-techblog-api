@@ -27,7 +27,7 @@ resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
 # EKS 클러스터 VPC CNI 정책 연결, VPC CNI가 작동할 수 있도록 VPC 내부의 리소스를 관리할 권한
 # VPC CNI란 쿠버네티스에서 Pod에 IP 주소를 할당하고, 네트워크 규칙을 적용하는 표준 인터페이스
 # Pod들이 서로 통신할 수 있게 만드는 가장 중요한 역할
-resource "aws_iam_role_plicy_attachment" "eks_vpc_cni_policy" {
+resource "aws_iam_role_policy_attachment" "eks_vpc_cni_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
   role       = aws_iam_role.eks_cluster_role.name
 }
@@ -36,7 +36,7 @@ resource "aws_iam_role_plicy_attachment" "eks_vpc_cni_policy" {
 resource "aws_eks_cluster" "ticketing_cluster" {
   name     = "ticketing-eks-cluster"
   role_arn = aws_iam_role.eks_cluster_role.arn
-  version  = "1.28"
+  version  = "1.34"
 
   vpc_config {
     subnet_ids = var.private_subnet_ids # EKS는 Private Subnet에 배치 (보안)
@@ -54,7 +54,7 @@ resource "aws_eks_cluster" "ticketing_cluster" {
 # EC2에 있는 Worker Node가 다른 AWS 서비스에 접근하기 위한 IAM Role
 resource "aws_iam_role" "eks_node_role" {
   name = "ticketing-eks-node-role"
-  asuume_role_policy = jsoncode({ 
+  assume_role_policy = jsonencode({ 
     Version = "2012-10-17"
     Statement = [
       {
