@@ -32,43 +32,6 @@ resource "aws_iam_role_policy_attachment" "eks_vpc_cni_policy" {
   role       = aws_iam_role.eks_cluster_role.name
 }
 
-resource "aws_security_group" "eks_node_sg" {
-  name        = "ticketing-eks-node-sg"
-  description = "Security group for EKS Worker Nodes"
-  vpc_id      = var.vpc_id
-
-  # Ingress 1: 노드 그룹 내부 통신 허용 (Pod, Kubelet 통신)
-  ingress {
-    description = "Allow all traffic within Node SG"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    self        = true # 이 SG를 사용하는 모든 EC2 간 통신 허용
-  }
-  
-  # Ingress 2: EKS Control Plane에서 Node로 들어오는 통신 허용 (Kubelet 포트 10250)
-  ingress {
-    description = "Allow EKS Control Plane"
-    from_port   = 10250 
-    to_port     = 10250 
-    protocol    = "tcp"
-    # VPC CIDR 블록 전체를 열어 EKS Control Plane이 통신할 수 있도록 함.
-    cidr_blocks = ["10.0.0.0/16"] 
-  }
-  
-  # Egress: 모든 아웃바운드 통신 허용 (AWS API, ECR, GitHub 접근을 위해 NAT Gateway 사용)
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "Ticketing-EKS-Node-SG"
-  }
-}
-
 # EKS Cluster (Control Plane) 정의
 resource "aws_eks_cluster" "ticketing_cluster" {
   name     = "ticketing-eks-cluster"
@@ -125,100 +88,30 @@ resource "aws_iam_role_policy_attachment" "ec2_container_registry_readonly" {
   role       = aws_iam_role.eks_node_role.name
 }
 
-
-resource "aws_launch_template" "eks_node_lt" {
-  name_prefix   = "ticketing-eks-node-lt-"
-  image_id      = data.aws_ami.eks_optimized.id # EKS 최적화 AMI 사용
-  instance_type = "t3.micro" 
-  
-  # 보안 그룹을 Launch Template의 네트워크 인터페이스에 연결
-  network_interfaces {
-    security_groups = [aws_security_group.eks_node_sg.id]
-  }
-
-  tag_specifications {
-    resource_type = "instance"
-    tags = {
-      Name = "Ticketing-EKS-Worker-Template"
-    }
-  }
-}
-
-data "aws_ami" "eks_optimized" {
-  most_recent = true
-  owners      = ["amazon"]
-  filter {
-    name   = "name"
-    values = ["amazon-eks-node-*"] 
-  }
-  # x86_64
-  filter {
-    name   = "architecture"
-    values = ["x86_64"] 
-  }
-}
-
 # EKS Managed Node Group (Worker Nodes)
 resource "aws_eks_node_group" "private_node_group" {
   cluster_name    = aws_eks_cluster.ticketing_cluster.name
   node_group_name = "ticketing-private-nodes"
   subnet_ids      = var.private_subnet_ids # 노드 그룹도 Private Subnet에 배치
   node_role_arn   = aws_iam_role.eks_node_role.arn
-  
-  remote_access {
-    ec2_ssh_key = "jenkins-key" 
-  }
+  instance_types  = ["t3.micro"]
 
   scaling_config {
     desired_size = 2 # 시작 노드 2개
     max_size     = 4
     min_size     = 2
   }
-  launch_template {
-    name    = aws_launch_template.eks_node_lt.name
-    version = "$Latest" # 최신 버전 사용 지시
-  }
+
   # EKS 클러스터가 완전히 생성된 후에 노드 그룹이 생성되도록 명시적 의존성 설정
   depends_on = [
     aws_iam_role_policy_attachment.eks_cluster_policy,
     aws_iam_role_policy_attachment.eks_vpc_cni_policy,
-    aws_security_group.eks_node_sg,
-    aws_launch_template.eks_node_lt,
   ]
 
   tags = {
     Name = "Ticketing-EKS-Worker_Node"
   }
 }
-
-resource "aws_eks_cluster" "ticketing_cluster_auth" {
-  name = aws_eks_cluster.ticketing_cluster.name
-}
-
-resource "aws_eks_addon" "aws_auth_configmap" {
-  cluster_name = aws_eks_cluster.ticketing_cluster.name
-  addon_name   = "aws-auth"
-  addon_version = "v1" # v1은 kube-system 네임스페이스의 ConfigMap 이름입니다.
-  resolve_conflicts = "OVERWRITE"
-
-  configuration_values = jsonencode({
-    mapRoles = [
-      {
-        rolearn  = aws_iam_role.eks_node_role.arn
-        username = "system:node:{{EC2PrivateDNSName}}"
-        groups   = ["system:bootstrappers", "system:nodes"]
-      }
-    ]
-  })
-  
-  # 이 ConfigMap은 EKS 클러스터가 완전히 생성된 후에만 적용되어야 합니다.
-  depends_on = [
-    aws_eks_cluster.ticketing_cluster,
-    aws_iam_role_policy_attachment.eks_worker_node_policy,
-    aws_iam_role_policy_attachment.eks_cni_policy,
-  ]
-}
-
 
 # EKS 설정 파일 접속에 필요한 정보를 output으로 내보냄
 output "cluster_name" {
