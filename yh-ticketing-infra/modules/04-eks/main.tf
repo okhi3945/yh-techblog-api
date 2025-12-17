@@ -18,6 +18,25 @@ resource "aws_iam_role" "eks_cluster_role" {
   })
 }
 
+resource "aws_security_group" "eks_node_sg" {
+  name        = "ticketing-eks-node-sg"
+  description = "Security group for all nodes in the cluster"
+  vpc_id      = var.vpc_id
+
+  # 노드 간 통신 및 기본 아웃바운드 규칙 설정
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "Ticketing-EKS-Node-SG"
+  }
+}
+
+
 # EKS 클러스터 관리 정책 연결, 기본 관리 권한, AWS 리소스를 만들거나 수정하는데 필요한 기본적인 권한
 resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"

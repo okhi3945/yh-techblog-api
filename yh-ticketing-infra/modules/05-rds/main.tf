@@ -44,7 +44,7 @@ resource "aws_db_subnet_group" "rds_subnet_group" {
 resource "aws_db_instance" "ticketing_db" {
   allocated_storage      = 20 # 20 GB (최소 권장)
   engine                 = "postgres"
-  engine_version         = "14.7" # 안정적인 PostgreSQL 버전
+  engine_version         = "17.6" # 안정적인 PostgreSQL 버전
   instance_class         = "db.t3.micro" # Free Tier용 t3 micro
   db_name                = "ticketing_db"
   username               = "postgres" # 마스터 사용자 이름
