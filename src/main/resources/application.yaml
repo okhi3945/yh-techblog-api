@@ -1,3 +1,23 @@
 spring:
   application:
     name: yh-ticketing
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/ticketing_db
+    username: ${DB_USER:postgres}
+    password: ${DB_PASS:password}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+logging:
+  level:
+    com.yh.ticketing: debug
