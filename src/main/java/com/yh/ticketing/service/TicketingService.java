@@ -19,6 +19,7 @@ public class TicketingService {
     private final BookingRepository bookingRepository;
     private final StringRedisTemplate redisTemplate;
 
+    # Redis 사용 코드
     @Transactional
     public Booking reserve(Long ticketId, String userId, String userName) {
         String lockKey = "lock:ticket:" + ticketId;
