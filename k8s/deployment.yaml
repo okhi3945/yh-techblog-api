@@ -1,0 +1,58 @@
+# Ticketing API Deployment
+# Spring Boot 애플리케이션을 EKS 클러스터에 배포하는 설정 파일
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ticketing-app
+  labels:
+    app: ticketing
+spec:
+  replicas: 2 # 고가용성을 위해 2개의 Pod를 유지
+  selector:
+    matchLabels:
+      app: ticketing
+  template:
+    metadata:
+      labels:
+        app: ticketing
+    spec:
+      containers:
+      - name: ticketing-app
+        image: 601559288376.dkr.ecr.ap-northeast-2.amazonaws.com/ticketing-api-repo:latest
+        ports:
+        - containerPort: 8080
+        env:
+        # 데이터베이스(RDS) 접속 정보
+        - name: DB_HOST
+          value: "terraform-20251219102530374700000001.cz8i6y4yiycx.ap-northeast-2.rds.amazonaws.com"
+        - name: DB_USER
+          value: "postgres"
+        - name: DB_PASS
+          value: "qwer1234"
+          
+        - name: REDIS_HOST
+          value: "ticketing-redis-service"
+        - name: REDIS_PORT
+          value: "6379"
+        
+        - name: SPRING_THREADS_VIRTUAL_ENABLED
+          value: "true"
+
+---
+# Ticketing API Service (LoadBalancer)
+# 외부 사용자가 80 포트로 접속할 수 있도록 AWS NLB를 생성
+apiVersion: v1
+kind: Service
+metadata:
+  name: ticketing-app-service
+  annotations:
+    # AWS Network Load Balancer를 생성하도록 지정
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+spec:
+  type: LoadBalancer
+  selector:
+    app: ticketing
+  ports:
+  - protocol: TCP
+    port: 80           # 외부 노출 포트
+    targetPort: 8080    # 컨테이너 내부 포트
