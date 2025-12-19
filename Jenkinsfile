@@ -25,7 +25,7 @@ pipeline {
                 // Gradle을 이용해 실행 가능한 JAR 파일 생성
                 // -x test는 빌드 속도를 위해 테스트를 건너뛰는 옵션입니다.
                 sh 'chmod +x gradlew'
-                sh './gradlew clean build -x test'
+                sh './gradlew clean build -x test -Dorg.gradle.jvmargs="-Xmx512m"'
             }
         }
 
