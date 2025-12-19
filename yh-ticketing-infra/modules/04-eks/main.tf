@@ -21,7 +21,7 @@ resource "aws_iam_role" "eks_cluster_role" {
 resource "aws_eks_access_entry" "jenkins_access_entry" {
   cluster_name      = aws_eks_cluster.ticketing_cluster.name
   principal_arn     = var.jenkins_role_arn
-  kubernetes_groups = ["system:masters"] # 쿠버네티스 최고 관리자 그룹
+  kubernetes_groups = [] 
   type              = "STANDARD"
 }
 
@@ -33,6 +33,7 @@ resource "aws_eks_access_policy_association" "jenkins_admin_policy" {
   access_scope {
     type = "cluster"
   }
+  depends_on = [aws_eks_access_entry.jenkins_access_entry]
 }
 
 resource "aws_security_group" "eks_node_sg" {
@@ -104,6 +105,11 @@ resource "aws_eks_cluster" "ticketing_cluster" {
     subnet_ids = var.private_subnet_ids # EKS는 Private Subnet에 배치 (보안)
     endpoint_private_access = true # VPC 내부 접근 허용
     endpoint_public_access = false # 외부 접근 차단
+  }
+
+  access_config {
+    authentication_mode                         = "API_AND_CONFIG_MAP"
+    bootstrap_cluster_creator_admin_permissions = true # 클러스터 생성자에게 관리자 권한 부여
   }
 
   tags = {
