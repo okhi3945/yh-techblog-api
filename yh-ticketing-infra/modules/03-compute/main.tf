@@ -68,6 +68,32 @@ resource "aws_iam_instance_profile" "jenkins_profile" {
   role = aws_iam_role.jenkins_role.name
 }
 
+# Jenkins에서 EKS 클러스터를 조회하고, 관리할 수 있는 권한 부여
+resource "aws_iam_role_policy_attachment" "jenkins_eks_admin" {
+  role       = aws_iam_role.jenkins_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy" 
+}
+
+resource "aws_iam_role_policy" "jenkins_eks_describe" {
+  name = "jenkins-eks-describe-policy"
+  role = aws_iam_role.jenkins_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "eks:DescribeCluster",
+          "eks:ListClusters",
+          "eks:AccessKubernetesApi"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 # AMI Data Source => Ubuntu 22.04 LTS 이미지 ID를 동적으로 가져와서 EC2에 설정하기 위함
 data "aws_ami" "ubuntu" {
   most_recent = true
