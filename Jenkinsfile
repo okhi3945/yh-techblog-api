@@ -56,8 +56,8 @@ pipeline {
                 // EKS 클러스터 접속 설정(kubeconfig)을 업데이트
                 sh "aws eks update-kubeconfig --name ${CLUSTER_NAME} --region ${AWS_REGION}"
                 
-                // 쿠버네티스 매니페스트(YAML)가 준비되면 아래 주석을 해제하여 배포를 자동화합니다.
-                // sh "kubectl apply -f k8s/"
+                // 쿠버네티스 매니페스트(YAML)를 사용하여 배포를 자동화
+                sh "kubectl apply -f k8s/"
                 echo "EKS 인프라 준비 완료. k8s 매니페스트 배포 대기 중..."
             }
         }
