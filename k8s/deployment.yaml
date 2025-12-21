@@ -24,7 +24,7 @@ spec:
         env:
         # 데이터베이스(RDS) 접속 정보
         - name: DB_HOST
-          value: "terraform-20251220143014582800000001.cz8i6y4yiycx.ap-northeast-2.rds.amazonaws.com"
+          value: "terraform-20251219102530374700000001.cz8i6y4yiycx.ap-northeast-2.rds.amazonaws.com"
         - name: DB_USER
           value: "postgres"
         - name: DB_PASS
