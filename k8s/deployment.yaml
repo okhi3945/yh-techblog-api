@@ -23,6 +23,8 @@ spec:
         ports:
         - containerPort: 8080
         env:
+        # 쿠버네티스가 컨테이너를 실행할 때 컨테이너 내부 OS 환경변수에 DB_HOST="terraform..."을 강제 주입함
+        # Java Spring Boot는 애플리케이션이 뜨면서 환경 변수로 저장된 DB_HOST를 받고, Spring Boot 코드에 있는 application.yaml에 치환하여 DB를 접속할 수 있음
         # 데이터베이스(RDS) 접속 정보, 환경 변수 설정, 소스코드 수정 없이 DB 주소등을 바꿀 수 있음
         - name: DB_HOST
           value: "terraform-20251219102530374700000001.cz8i6y4yiycx.ap-northeast-2.rds.amazonaws.com"
