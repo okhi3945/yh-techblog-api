@@ -1,5 +1,6 @@
-# Ticketing API Deployment
+# Ticketing API Server Deployment
 # Spring Boot 애플리케이션을 EKS 클러스터에 배포하는 설정 파일
+# Deployment : 어떤 이미지를 몇개나 띄울 것인지 결정
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -7,14 +8,14 @@ metadata:
   labels:
     app: ticketing
 spec:
-  replicas: 2 # 고가용성을 위해 2개의 Pod를 유지
+  replicas: 2 # 고가용성을 위해 2개의 Pod를 유지, 하나가 죽어도 서비스가 유지되게 함
   selector:
     matchLabels:
-      app: ticketing
+      app: ticketing # 아래의 템플릿 라벨과 일치해야 관리 대상이 됨
   template:
     metadata:
       labels:
-        app: ticketing
+        app: ticketing # 이 라벨이 붙은 Pod를 생성한다!
     spec:
       containers:
       - name: ticketing-app
@@ -22,7 +23,7 @@ spec:
         ports:
         - containerPort: 8080
         env:
-        # 데이터베이스(RDS) 접속 정보
+        # 데이터베이스(RDS) 접속 정보, 환경 변수 설정, 소스코드 수정 없이 DB 주소등을 바꿀 수 있음
         - name: DB_HOST
           value: "terraform-20251219102530374700000001.cz8i6y4yiycx.ap-northeast-2.rds.amazonaws.com"
         - name: DB_USER
@@ -31,7 +32,7 @@ spec:
           value: "qwer1234"
           
         - name: REDIS_HOST
-          value: "ticketing-redis-service"
+          value: "ticketing-redis-service" # redis.yaml로 만들 Redis 서비스 이름을 그대로 사용하여 내부 DNS 기능 활성화
         - name: REDIS_PORT
           value: "6379"
         
@@ -41,17 +42,19 @@ spec:
 ---
 # Ticketing API Service (LoadBalancer)
 # 외부 사용자가 80 포트로 접속할 수 있도록 AWS NLB를 생성
+# Service : 외부 사용자가 어떻게 접속하게 할 것인가를 결정
 apiVersion: v1
 kind: Service
 metadata:
   name: ticketing-app-service
   annotations:
     # AWS Network Load Balancer를 생성하도록 지정
+    # AWS와 연동되어 실제 NLB를 자동으로 생성 => 그렇기 때문에 테라폼에서 NLB를 정의하지 않았음
     service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 spec:
-  type: LoadBalancer
+  type: LoadBalancer # 외부 노출용 서비스 타입
   selector:
-    app: ticketing
+    app: ticketing # 위에 정의한 Deployment의 Pod들을 찾아 연결함
   ports:
   - protocol: TCP
     port: 80           # 외부 노출 포트
