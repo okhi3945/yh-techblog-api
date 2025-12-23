@@ -7,18 +7,18 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "bookings")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-public class Booking {
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+class Booking {
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
     private Long ticketId;
     private String userId;
     private String userName;
     private LocalDateTime createdAt;
-
-    @PrePersist
-    public void init() {
-        this.id = UUID.randomUUID().toString();
-        this.createdAt = LocalDateTime.now();
-    }
 }

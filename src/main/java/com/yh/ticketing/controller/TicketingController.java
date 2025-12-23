@@ -19,20 +19,13 @@ public class TicketingController {
     private final RedissonLockFacade redissonLockFacade;
 
     @PostMapping("/{ticketId}/reserve")
-    public ResponseEntity<?> reserve(
-            @PathVariable Long ticketId,
-            @RequestParam String userId,
-            @RequestParam String userName) {
-        try {
-            Booking booking = redissonLockFacade.reserveWithLock(ticketId, userId, userName);
-            return ResponseEntity.status(HttpStatus.CREATED).body(booking);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    public Booking reserve(@PathVariable Long ticketId, @RequestParam String userId, @RequestParam String userName) {
+        return redissonLockFacade.reserveWithLock(ticketId, userId, userName);
     }
 
+    // 4. 내 예약 확인
     @GetMapping("/my")
-    public ResponseEntity<List<Booking>> getMyBookings(@RequestParam String userId) {
-        return ResponseEntity.ok(ticketingService.getMyBookings(userId));
+    public List<Booking> getMyBookings(@RequestParam String userId) {
+        return ticketingService.getMyBookings(userId);
     }
 }

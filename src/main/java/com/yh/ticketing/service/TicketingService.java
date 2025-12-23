@@ -68,6 +68,7 @@ package com.yh.ticketing.service;
 
 import com.yh.ticketing.model.Booking;
 import com.yh.ticketing.model.Ticket;
+import com.yh.ticketing.model.Performance;
 import com.yh.ticketing.repository.BookingRepository;
 import com.yh.ticketing.repository.TicketRepository;
 import lombok.RequiredArgsConstructor;
@@ -77,26 +78,57 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class TicketingService {
+class TicketingService {
+    private final PerformanceRepository performanceRepository;
     private final TicketRepository ticketRepository;
     private final BookingRepository bookingRepository;
 
-    // 부모 클래스(Facade)에서 시작된 트랜잭션이 있다면 참여하고, 없다면 새로 시작시킴
+    // [Admin] 공연 정보 생성
+    @Transactional
+    public Performance createPerformance(String title, String description, LocalDateTime startAt) {
+        Performance performance = Performance.builder()
+                .title(title)
+                .description(description)
+                .startAt(startAt)
+                .build();
+        return performanceRepository.save(performance);
+    }
+
+    // [Admin] 특정 공연에 대한 티켓(좌석) 100개 일괄 생성
+    @Transactional
+    public List<Ticket> initTickets(Long performanceId, int count) {
+        performanceRepository.findById(performanceId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "공연 정보를 찾을 수 없습니다."));
+
+        List<Ticket> tickets = new ArrayList<>();
+        for (int i = 1; i <= count; i++) {
+            tickets.add(Ticket.builder()
+                    .performanceId(performanceId)
+                    .seatNumber("SEAT-" + i)
+                    .status(TicketStatus.AVAILABLE)
+                    .build());
+        }
+        return ticketRepository.saveAll(tickets);
+    }
+
+    // [User] 티켓 예약 (동시성 제어 대상)
     @Transactional
     public Booking reserve(Long ticketId, String userId, String userName) {
         Ticket ticket = ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new RuntimeException("티켓 정보가 없습니다."));
-        
-        ticket.decrease(); // 재고 차감 재고가 없으면 여기서 RuntimeException 발생함
-        
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "티켓 정보가 없습니다."));
+
+        ticket.reserve(); // 상태 변경 로직 (AVAILABLE -> BOOKED)
+
         Booking booking = Booking.builder()
                 .ticketId(ticketId)
                 .userId(userId)
                 .userName(userName)
+                .createdAt(LocalDateTime.now())
                 .build();
-        
+
         return bookingRepository.save(booking);
     }
+
     @Transactional(readOnly = true)
     public List<Booking> getMyBookings(String userId) {
         return bookingRepository.findByUserId(userId);

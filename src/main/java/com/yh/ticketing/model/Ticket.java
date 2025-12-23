@@ -5,18 +5,28 @@ import lombok.*;
 
 @Entity
 @Table(name = "tickets")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-public class Ticket {
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+class Ticket {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String title;
-    private Integer availableQuantity;
+    
+    private Long performanceId;    // 어느 공연의 티켓인가
+    private String seatNumber;     // 좌석 번호 (예: A1, A2)
 
-    public void decrease() {
-        if (this.availableQuantity <= 0) {
-            throw new RuntimeException("매진되었습니다.");
+    @Enumerated(EnumType.STRING)
+    private TicketStatus status;   // AVAILABLE, BOOKED
+
+    public void reserve() {
+        if (this.status != TicketStatus.AVAILABLE) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 예약된 좌석입니다.");
         }
-        this.availableQuantity -= 1;
+        this.status = TicketStatus.BOOKED;
     }
 }
+
+enum TicketStatus { AVAILABLE, BOOKED }
