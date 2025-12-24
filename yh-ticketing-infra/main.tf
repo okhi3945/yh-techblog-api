@@ -81,3 +81,9 @@ output "rds_endpoint" {
   value = module.rds.rds_endpoint
   description = "Ticketing PostgreSQL DB Endpoint Address"
 }
+
+output "rds_password" {
+  value       = var.rds_db_password
+  description = "The password for the RDS instance"
+  sensitive   = true
+}

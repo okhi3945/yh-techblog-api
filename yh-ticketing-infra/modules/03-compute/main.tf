@@ -38,6 +38,40 @@ resource "aws_security_group" "jenkins_sg" {
   }
 }
 
+# Terraform State(S3/DynamoDB) 접근 권한 추가
+resource "aws_iam_role_policy" "jenkins_terraform_state_access" {
+  name = "jenkins-terraform-state-access"
+  role = aws_iam_role.jenkins_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:ListBucket"
+        ]
+        Resource = [
+          "arn:aws:s3:::ticketing-tfstate-yh-s3",
+          "arn:aws:s3:::ticketing-tfstate-yh-s3/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:DescribeTable"
+        ]
+        Resource = "arn:aws:dynamodb:*:*:table/ticketing-tf-locks"
+      }
+    ]
+  })
+}
+
 # Jenkins IAM ROLE (Jenkins EC2에서 ECR에 접근할 수 있도록 권한 부여)
 # Jenkins가 AWS 서비스(ECR, EKS)에 접근할 수 있는 권한 정의
 resource "aws_iam_role" "jenkins_role" {
@@ -119,41 +153,32 @@ resource "aws_instance" "jenkins_master" {
   subnet_id = var.public_subnet_ids[0]
   vpc_security_group_ids = [aws_security_group.jenkins_sg.id]
   associate_public_ip_address = true
+  iam_instance_profile = aws_iam_instance_profile.jenkins_profile.name
 
-  # Jenkins, Java, Docker 자동 설치 스크립트 - 사용자 데이터
   user_data = <<-EOF
               #!/bin/bash
-              # 1. 패키지 업데이트
               sudo apt update -y
+              sudo apt install openjdk-17-jre unzip gettext-base -y 
               
-              # 2. Java 17 설치 (Jenkins 필수 요소)
-              sudo apt install openjdk-17-jre -y
-              
-              # 3. Jenkins 저장소 키 등록
+              # Terraform 설치 로직 추가
+              wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+              echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+              sudo apt update && sudo apt install terraform -y
+
+              # Jenkins 설치
               curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | sudo tee /usr/share/keyrings/jenkins-keyring.asc > /dev/null
-              
-              # 4. Jenkins 저장소 소스 리스트 추가
               echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/ | sudo tee /etc/apt/sources.list.d/jenkins.list > /dev/null
-              
-              # 5. 패키지 목록 재업데이트 (저장소 반영)
               sudo apt update -y
-              
-              # 6. Jenkins 설치 (설치 시 서비스 파일이 시스템에 등록됨)
               sudo apt install jenkins -y
               
-              # 7. Docker 설치 및 권한 부여
+              # Docker 설치 및 권한 부여
               sudo apt install docker.io -y
               sudo usermod -aG docker jenkins 
               sudo usermod -aG docker ubuntu 
               
-              # 8. Jenkins 서비스 활성화 및 시작 (설치 후이므로 서비스 파일이 존재함)
               sudo systemctl enable jenkins
               sudo systemctl start jenkins
-              
-              # 9. 불필요한 패키지 정리
-              sudo apt autoremove -y
               EOF
-  iam_instance_profile = aws_iam_instance_profile.jenkins_profile.name
 
   tags = {
     Name = "Ticketing-Jenkins-Master-Server"
