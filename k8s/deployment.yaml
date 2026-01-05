@@ -8,7 +8,7 @@ metadata:
   labels:
     app: ticketing
 spec:
-  replicas: 2 # 고가용성을 위해 2개의 Pod를 유지, 하나가 죽어도 서비스가 유지되게 함
+  replicas: 1 # 고가용성을 위해 2개의 Pod를 유지해야 하나 프리티어이기 때문에 레플리카를 우선 1개로 개발, 추후 2개로 향상시켜야함!
   selector:
     matchLabels:
       app: ticketing # 아래의 템플릿 라벨과 일치해야 관리 대상이 됨
